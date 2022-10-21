@@ -1,0 +1,13 @@
+__pycache__/
+venv/
+models/
+analysis_aspect_ratio.py
+call.py
+output/
+run_app.sh
+ssd_resnet50_v1_fpn_640x640_coco17_tpu-8.tar.gz
+ssd_resnet50_v1_fpn_640x640_coco17_tpu-8/
+test.png
+input/
+model/
+results/
