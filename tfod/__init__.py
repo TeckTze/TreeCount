@@ -43,12 +43,14 @@ def load_inference_config(version) -> InferenceConfig:
 
     # Pipeline config file
     pipeline_config_dict = {'v2': '/mnt/data/TD_API/model/v2/pipeline.config',
-                            'v3': '/mnt/data/TD_API/model/v3_mobilenet/pipeline.config'}
+                            'v3': '/mnt/data/TD_API/model/v3_mobilenet/pipeline.config',
+                            'v4': '/mnt/data/TD_API/model/v4/pipeline.config'}
     pipeline_config = pipeline_config_dict[version] # '/mnt/data/TD_API/model/v3_mobilenet/pipeline.config' # '/mnt/data/TD_API/model/v2/pipeline.config'
 
     # checkpoint path
     checkpoint_path_dict = {'v2': '/mnt/data/TD_API/model/v2/ckpt/ckpt-1',
-                            'v3': '/mnt/data/TD_API/model/v3_mobilenet/ckpt/ckpt-1'}
+                            'v3': '/mnt/data/TD_API/model/v3_mobilenet/ckpt/ckpt-1',
+                            'v4': '/mnt/data/TD_API/model/v4/ckpt/ckpt-1'}
     checkpoint_path = checkpoint_path_dict[version] # '/mnt/data/TD_API/model/v3_mobilenet/ckpt/ckpt-1' # '/mnt/data/TD_API/model/v2/ckpt/ckpt-1'
     
     # Min Score threshold
@@ -66,8 +68,9 @@ def load_inference_config(version) -> InferenceConfig:
 def load_model():
 
     # 1. Load Inference Configuration
-    inference_config_dict = {'v2': load_inference_config(version = 'v2'),
-                            'v3': load_inference_config(version = 'v3')}
+    inference_config_dict = {'v4': load_inference_config(version = 'v4')}
+                           #  {'v2': load_inference_config(version = 'v2'),
+                           #  'v3': load_inference_config(version = 'v3')}
 
     detection_model_dict = {}
     

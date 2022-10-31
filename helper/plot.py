@@ -36,7 +36,9 @@ def plot_detections(image_np,
             scores,
             category_index,
             use_normalized_coordinates = True,
-            min_score_thresh = 0.8)
+            skip_scores = True,
+            skip_labels = True,
+            min_score_thresh = 0.5) # 0.8
 
     if image_name:
         plt.imsave(image_name, image_np_with_annotations)

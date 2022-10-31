@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 import scipy
+import json
 from skimage.segmentation import watershed
 from skimage.feature import peak_local_max
 
@@ -117,6 +118,8 @@ class HSVTreeCountDetector:
                 # cv2.rectangle(img, (x,y), (x + w, y + h), (0, 0, 255), 3) # Commented 20220914 - Move drawing outside the loop
                 tree_count += 1
 
+        # Track box of actual image
+        bbox_list = []
         for x, y, w, h in box_list:
             # if resize_flag:
             #     x = int(x/ resize_factor)
@@ -129,15 +132,28 @@ class HSVTreeCountDetector:
             #     cv2.rectangle(imgOri, (x, y), (x_bottom, y_bottom), (0, 0, 255), 3)
             # else:
             #     cv2.rectangle(imgOri, (x, y), (x + w, y + h), (0, 0, 255), 3)
-            
+            if resize_flag:
+                xmin = int(x/ resize_factor)
+                ymin = int(y/ resize_factor)
+                xmax = int((x+ w)/ resize_factor)
+                ymax = int((y+ h)/ resize_factor)
+
+                bbox_list.append([ymin, xmin, ymax, xmax])
             cv2.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 2) # Modified 20221011 - Reduce line thickness
+        
+        bbox_list_str = json.dumps(bbox_list)
 
         # Resize output image - Added 20221004 - Reduce API response time
         # if resize_flag:
         #    imgOri = cv2.resize(imgOri, (dim))
-
+        resize_flag_out, resize_factor_out = get_resize_flag_factor_with_max_dim(img, max_dim = 640) # Added 20221024 - Resize to speed up
+        if resize_flag_out:
+            dim_out = (int(img.shape[1]* resize_factor_out), int(img.shape[0]* resize_factor_out))
+            img = cv2.resize(img, (dim_out))
+        
         # return tree_count, imgOri
-        return tree_count, img # Changed 20221011 - work on resized image
+        # return tree_count, img # Changed 20221011 - work on resized image
+        return tree_count, bbox_list_str, img # Changed 20221024 - Return actual box list
 
 def predict_tree_count(img):
     """
@@ -154,11 +170,11 @@ def predict_tree_count(img):
     cnt_thresh = ContourThresholds(min_area = 400)
 
     # Predict tree count
-    tree_count, imgOut = HSVTreeCountDetector.predict(img = img,
+    tree_count, bbox_list, imgOut = HSVTreeCountDetector.predict(img = img,
                                               hsv_thresh = hsv_thresh,
                                               cnt_thresh = cnt_thresh)
 
-    return tree_count, imgOut
+    return tree_count, bbox_list, imgOut
 
 def get_resize_flag_factor(img, threshold):
     """

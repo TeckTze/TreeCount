@@ -12,6 +12,7 @@ import datetime
 import random
 import string
 import sys
+import json
 sys.path.insert(0, '/mnt/data/TD_API/models/')
 sys.path.insert(0, '/mnt/data/TD_API/models/research')
 sys.path.insert(0, '/mnt/data/TD_API/models/research/object_detection')
@@ -66,7 +67,7 @@ def get_tree_count_response(contents):
     img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
 
     # Predict tree count
-    tree_count, imgOut = predict_tree_count(img)
+    tree_count, bbox_list, imgOut = predict_tree_count(img)
     
     # Create output folder if not exists
     os.makedirs('output', exist_ok = True)
@@ -82,7 +83,8 @@ def get_tree_count_response(contents):
     cv2.imwrite(out_file, imgOut)
 
     # headers
-    headers = {'tree_count': str(tree_count)}
+    headers = {'tree_count': str(tree_count),
+              'bounding_boxes': bbox_list} # Added 20221024 - Add bounding boxes
 
     # return header and out_file
     return headers, out_file
@@ -94,8 +96,8 @@ def get_tree_count_response_tfod(contents, version = 'v2'):
 
     height, width = img.shape[:2]
     higher_dim = max(height, width)
-    if higher_dim > 900:
-        resize_factor = float(900/ higher_dim)
+    if higher_dim > 640: # Modified 20221024 - Modify to 640
+        resize_factor = float(640/ higher_dim)
         img = cv2.resize(img, (0,0), fx = resize_factor, fy = resize_factor)
 
     test_image_np = np.expand_dims(img, axis = 0)
@@ -114,8 +116,23 @@ def get_tree_count_response_tfod(contents, version = 'v2'):
                     figsize = (15,20),
                     image_name = out_file)
     
+    if len(detections['detection_boxes'][0].numpy()) > 0:
+        detections_boxes_np = detections['detection_boxes'][0].numpy() # Added 20221024
+        multiply_arr = np.array([height, width, height, width])
+        detections_boxes_np = detections_boxes_np * multiply_arr
+        detections_boxes_np = detections_boxes_np.astype(np.int32)
+        
+        # Get bounding boxes for those exceeding min score thresh
+        flag_arr = detections['detection_scores'][0].numpy() > inference_config_dict.get(version).min_score_thresh
+        detections_boxes_np = detections_boxes_np[flag_arr]
+
+        detections_boxes_list = detections_boxes_np.tolist()
+    else:
+        detections_boxes_list = []
+    
     tree_count = sum(detections['detection_scores'][0].numpy() > inference_config_dict.get(version).min_score_thresh)
-    headers = {'tree_count': str(tree_count)}
+    headers = {'tree_count': str(tree_count),
+              'bounding_boxes': json.dumps(detections_boxes_list)}
 
     return headers, out_file
 
@@ -140,7 +157,7 @@ async def get_tree_count(file: UploadFile = File(...)):
     check_extension(file)
 
     contents = await file.read()
-    headers, out_file = get_tree_count_response_tfod(contents, version = 'v2')
+    headers, out_file = get_tree_count_response_tfod(contents, version = 'v4') #  'v2')
 
     return headers
 
@@ -168,7 +185,7 @@ async def get_tree_bbox(file: UploadFile = File(...)):
 
     check_extension(file)
     contents = await file.read()
-    headers, out_file = get_tree_count_response_tfod(contents, version = 'v2')
+    headers, out_file = get_tree_count_response_tfod(contents, version = 'v4') # 'v2')
 
     return FileResponse(out_file, headers = headers)
 
